@@ -1,0 +1,8 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Arduino / build output
+build/
+*.elf
+*.hex
