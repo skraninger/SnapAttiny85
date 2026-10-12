@@ -62,7 +62,7 @@ entirely. It also keeps every resource the LED phase will need free.
 * Only PB5/PB2/PB4/PB3 are ADC-capable, and PB5 is the reset pin, so both touch
   pads must live on **PB2/PB3/PB4**. Using PB2 + PB3 for touch leaves **PB4**
   free (Phase 1 reserved it for the pot; Phase 2 uses it for the NeoPixel strip).
-* The music engine (`DigitalMusicBox.c`) drives its PWM from **Timer1 + the
+* The music engine (`Reference/DigitalMusicBox.c`) drives its PWM from **Timer1 + the
   64 MHz PLL**. On the ATtiny85 Timer1's channel A is **OC1A = PB1**, so audio
   goes there (channel B would be PB4, which touch/carrier need).
 * That leaves **PB0**: used here for a plain **beat LED**. Phase 2 keeps this LED
@@ -102,11 +102,11 @@ DC-blocked before the speaker:
 
 ### 4.1 Engines reused
 
-* **Audio** — `DigitalMusicBox.c` (David Johnson-Davies, CC BY 4.0): a 4-voice
+* **Audio** — `Reference/DigitalMusicBox.c` (David Johnson-Davies, CC BY 4.0): a 4-voice
   DDS oscillator. Each voice is a square wave built from a 16-bit phase
   accumulator; the four voices are summed and written to the PWM duty register.
   The 32-entry `Scale[]` and the note decay are unchanged.
-* **Touch** — the `ADCTouch` method from `LedAttinyTouchx2.ino`: read the pad's
+* **Touch** — the `ADCTouch` method from `Reference/LedAttinyTouchx2.ino`: read the pad's
   capacitance through the ADC, compare against a baseline measured at start-up,
   and debounce on the edge.
 * **Songs** — `songs.h`, generated from the `MusicBoxPunchSheets` PDFs by
@@ -289,7 +289,7 @@ Implemented as a standalone sketch in `Phase2_LedMusicBox/`; see
   beat/touch LED** (no pin is lost).
 * **LED effects are cycled** by the second touch pad (Wave, Chaser, Rainbow,
   Scanner, Solid, Color Wipe) and also advance on a song change; ported
-  integer-only from `LedAttinyTouchx2.ino`. The Adafruit NeoPixel library does
+  integer-only from `Reference/LedAttinyTouchx2.ino`. The Adafruit NeoPixel library does
   not fit in flash. (Phase 1's PLAY/pause is gone — that pad now cycles effects.)
 * **Refresh tied to the tempo** — the strip updates from the note clock (once
   per note slot), so the interrupts-off WS2812 frame (~275 µs) stays bounded.

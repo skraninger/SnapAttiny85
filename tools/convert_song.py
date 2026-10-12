@@ -3,7 +3,7 @@
 convert_song.py -- Convert simple letter-note melodies into the ATtiny85
 "Digital Music Box" chord-word format used by the Snap toy.
 
-TARGET FORMAT (from DigitalMusicBox.c)
+TARGET FORMAT (from Reference/DigitalMusicBox.c)
 --------------------------------------
   * A tune is a `const uint32_t[]` stored in PROGMEM.
   * Each element is ONE TIME SLOT (one Watchdog-interrupt period).

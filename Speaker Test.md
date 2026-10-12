@@ -128,7 +128,7 @@ All knobs are `#define`s near the top of `SpeakerTest/SpeakerTest.ino`:
 | `DECAY` | `9` | Envelope shift, kept equal to the music engine |
 | `TONE_LOW` / `TONE_HIGH` | `Scale[13]` / `Scale[25]` | The two notes (change the indices to pick others) |
 
-`Scale[]` is the 0-based 32-note table shared with `DigitalMusicBox.c` /
+`Scale[]` is the 0-based 32-note table shared with `Reference/DigitalMusicBox.c` /
 `Phase1_MusicBox.ino`, so any index from 0 to 31 is a valid note.
 
 ---
@@ -179,5 +179,5 @@ If pads are the next thing to bring up, tune touch response as described in
 | `SpeakerTest/SpeakerTest.ino` | This test sketch |
 | `Speaker Test.md` | This document |
 | `Phase1_MusicBox/Phase1_MusicBox.ino` | Full Phase 1 engine the sketch is derived from |
-| `DigitalMusicBox.c` | Original 4-voice DDS engine (CC BY 4.0) |
+| `Reference/DigitalMusicBox.c` | Original 4-voice DDS engine (CC BY 4.0) |
 | `Phase 1 - Music Box.md` | Phase 1 design & bring-up notes |

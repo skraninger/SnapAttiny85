@@ -4,7 +4,7 @@
  * Phase 2 is Phase 1 (touch music box: RLE songs + per-song tempo, ADCTouch,
  * PWM audio) plus an 8-pixel LED strip that shows ONE animated pattern per
  * song.  It is a standalone sketch so Phase 1 stays untouched.  The patterns
- * are hand-ported (integer-only) from LedAttinyTouchx2.ino; the Adafruit
+ * are hand-ported (integer-only) from Reference/LedAttinyTouchx2.ino; the Adafruit
  * NeoPixel library is NOT used because it would not fit in the ATtiny85's 8 KB.
  *
  * CONTROLS
@@ -273,7 +273,7 @@ static void clearPix() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  LED patterns (integer-only, ported from LedAttinyTouchx2.ino)      */
+/*  LED patterns (integer-only, ported from Reference/LedAttinyTouchx2.ino)      */
 /*  One pattern per song; renderPattern() picks by songIndex.          */
 /* ------------------------------------------------------------------ */
 
@@ -297,8 +297,8 @@ static const int8_t sineTab[32] PROGMEM = {
    -127,-125,-117,-106, -90, -71, -49, -25 };
 
 // 0) Bluey Theme - Wave: a sinusoidal hue wave travels across the strip.  Hue
-//    oscillates 160..240 (blue -> purple -> red), matching LedAttinyTouchx2's
-//    waveyFrame(), but computed with the integer sine table (no float).
+//    oscillates 160..240 (blue -> purple -> red), matching waveyFrame() in
+//    Reference/LedAttinyTouchx2.ino, but computed with the integer sine table.
 static void patWave() {
     static uint8_t phase = 0;
     for (uint8_t i = 0; i < NUM_LEDS; i++) {
@@ -369,7 +369,7 @@ static void patWipe() {
 
 // LED effects, cycled by the EFFECT pad (index 0..NUM_PATTERNS-1).  The same
 // cycle also advances when the song changes, so a new song always brings a new
-// effect.  (A subset of LedAttinyTouchx2.ino's patterns, integer-only.)
+// effect.  (A subset of Reference/LedAttinyTouchx2.ino's patterns, integer-only.)
 static void renderPattern() {
     switch (patternIndex) {
         case 0: patWave();    break;   // blue/purple/red hue wave

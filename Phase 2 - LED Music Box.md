@@ -70,7 +70,7 @@ rather than repurposing the flashing-LED pin.
 
 ## 4. LED effects (cycled by the EFFECT pad)
 
-Ported (integer-only) from `LedAttinyTouchx2.ino`; the Adafruit library is **not**
+Ported (integer-only) from `Reference/LedAttinyTouchx2.ino`; the Adafruit library is **not**
 used (it would not fit — see §6). `renderPattern()` selects by the global
 `patternIndex`, which **both the EFFECT pad and a song change advance**.
 
@@ -178,5 +178,5 @@ Verification:
 | `Phase2_LedMusicBox/songs.h` | generated song data (copy of the Phase 1 header) |
 | `Phase 2 - LED Music Box.md` | this document |
 | `Phase 1 - Music Box.md` | Phase 1 (music only) |
-| `LedAttinyTouchx2.ino` | source of the touch stack and the patterns |
+| `Reference/LedAttinyTouchx2.ino` | source of the touch stack and the patterns |
 | `tools/convert_punchsheet.py` | song generator (shared with Phase 1) |

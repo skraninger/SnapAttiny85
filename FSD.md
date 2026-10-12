@@ -11,7 +11,7 @@
 | **Status**       | Draft for review                                   |
 | **Target HW**    | Microchip ATtiny85 (DIP-8 / SOIC-8), 8 KB flash    |
 | **Source of idea** | `Project Idea.md`                                |
-| **Reference docs** | `ATtiny85 NeoPixel + Capacitive Touch.md`, `LedAttinyTouchx2.ino`, `DigitalMusicBox.c` |
+| **Reference docs** | `Reference/ATtiny85 NeoPixel + Capacitive Touch.md`, `Reference/LedAttinyTouchx2.ino`, `Reference/DigitalMusicBox.c` |
 
 ### Revision history
 
@@ -50,9 +50,9 @@ the idea:
 
 | Block                        | Source file                              | Reused for                                  |
 | ---------------------------- | ---------------------------------------- | ------------------------------------------- |
-| Capacitive touch (ADC method) | `LedAttinyTouchx2.ino` (`ADCTouch`)     | Touch pads + debounce + baseline calibration |
-| LED animation patterns        | `LedAttinyTouchx2.ino`                  | Pattern engine (8 patterns)                 |
-| Polyphonic tone synthesis     | `DigitalMusicBox.c`                     | Music engine (DDS + PWM audio)              |
+| Capacitive touch (ADC method) | `Reference/LedAttinyTouchx2.ino` (`ADCTouch`)     | Touch pads + debounce + baseline calibration |
+| LED animation patterns        | `Reference/LedAttinyTouchx2.ino`                  | Pattern engine (8 patterns)                 |
+| Polyphonic tone synthesis     | `Reference/DigitalMusicBox.c`                     | Music engine (DDS + PWM audio)              |
 
 ---
 
@@ -199,7 +199,7 @@ Logical software layers:
 ### 6.3 Clock
 
 - **Baseline:** 8 MHz internal RC (`clock=internal8`), matching the working
-  `LedAttinyTouchx2` build and reliable `ADCTouch` behaviour.
+  `Reference/LedAttinyTouchx2.ino` build and reliable `ADCTouch` behaviour.
 - **Optional:** 16 MHz (internal PLL) where higher audio-carrier frequency is
   desired (see §11.1). If used, NeoPixel timing and the audio sample rate MUST
   be re-derived.
@@ -277,7 +277,7 @@ Priorities: **M** = Must (v1), **S** = Should, **C** = Could, **W** = Won't (v1)
 
 ### 8.1 LED patterns (v1 set)
 
-Adapted from `LedAttinyTouchx2.ino`; each pattern is indexed 0..N-1 and cycled
+Adapted from `Reference/LedAttinyTouchx2.ino`; each pattern is indexed 0..N-1 and cycled
 by the **PATTERN** pad.
 
 | # | Name            | Behaviour                                                   | Knob-dependent |
@@ -313,14 +313,14 @@ by the **PATTERN** pad.
 
 ### 9.1 Song format (chord-word table)
 
-Compatible with the format in `DigitalMusicBox.c`:
+Compatible with the format in `Reference/DigitalMusicBox.c`:
 
 - The tune is a `const uint32_t[]` array in `PROGMEM`.
 - Each element is a **chord word**: one time slot. Bit *b* set means the note at
   `Scale[b]` is retriggered in that slot (MSB = note 0).
 - Slots advance at the configured tempo (default **4 slots/second**).
 - The sequence terminates with the sentinel chord word `0x000000FF`.
-- Frequencies come from a 32-entry `Scale[]` table (see `DigitalMusicBox.c`).
+- Frequencies come from a 32-entry `Scale[]` table (see `Reference/DigitalMusicBox.c`).
 
 ```
 Tune[] = {
@@ -532,6 +532,6 @@ simple RC/LC low-pass before the speaker.
 ## Appendix B — References
 
 - `Project Idea.md` — origin of the product concept.
-- `ATtiny85 NeoPixel + Capacitive Touch.md` — NeoPixel + touch wiring, patterns, power.
-- `LedAttinyTouchx2.ino` — dual-touch LED lamp: `ADCTouch`, calibration, debounce, EEPROM, 8 patterns.
-- `DigitalMusicBox.c` — David Johnson-Davies, 4-voice DDS music engine (CC BY 4.0).
+- `Reference/ATtiny85 NeoPixel + Capacitive Touch.md` — NeoPixel + touch wiring, patterns, power.
+- `Reference/LedAttinyTouchx2.ino` — dual-touch LED lamp: `ADCTouch`, calibration, debounce, EEPROM, 8 patterns.
+- `Reference/DigitalMusicBox.c` — David Johnson-Davies, 4-voice DDS music engine (CC BY 4.0).

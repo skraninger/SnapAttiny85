@@ -13,7 +13,7 @@
  * Johnson-Davies' "Digital Music Box v2" (CC BY 4.0), adapted here for an 8 MHz
  * ATtiny85 and the pins this board uses.  The songs are stored in a compact
  * run-length form (see songs.h / advanceNote()) so all of them fit in 8 KB.
- * The touch stack mirrors the proven "LedAttinyTouchx2" sketch (ADCTouch +
+ * The touch stack mirrors the proven "Reference/LedAttinyTouchx2.ino" sketch (ADCTouch +
  * baseline calibration).
  *
  * PIN MAP (Phase 1)
@@ -71,7 +71,7 @@
 // A voice's envelope starts at 1 << (DECAY + AMP_SHIFT) and steps down by 1 per
 // sample, so peak loudness = 1 << AMP_SHIFT and the decay lasts
 // (1 << (DECAY + AMP_SHIFT)) / 20000 seconds.  Keep DECAY + AMP_SHIFT <= 15.
-#define DECAY           9        // decay curve / length (from DigitalMusicBox)
+#define DECAY           9        // decay curve / length (from Reference/DigitalMusicBox.c)
 #define AMP_SHIFT       5        // voice peak = 1 << AMP_SHIFT;
                                  //   raise to 6 for ~2x louder (and a longer decay)
 #define VOICES          4        // DDS voices (max notes per chord)

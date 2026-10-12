@@ -3,7 +3,7 @@
 **How to turn a song into data the ATtiny85 music player can play.**
 
 This document describes the compact slot format used by the music engine (from
-`DigitalMusicBox.c`), the note table, the timing, and the **`.song` text
+`Reference/DigitalMusicBox.c`), the note table, the timing, and the **`.song` text
 converter** (`tools/convert_song.py`). The compiled `songs.h` in this project is
 now generated from the punch sheets instead — see `Punch Sheet Conversion.md`;
 the `.song` path below remains available for hand-written melodies.
@@ -12,7 +12,7 @@ Related files:
 
 | File | Purpose |
 | ---- | ------- |
-| `DigitalMusicBox.c` | Reference music engine (David Johnson-Davies, CC BY 4.0) |
+| `Reference/DigitalMusicBox.c` | Reference music engine (David Johnson-Davies, CC BY 4.0) |
 | `tools/convert_song.py` | Melody → chord-word converter (this project) |
 | `tools/convert_punchsheet.py` | Punch-sheet PDF → chord-word converter (this project) |
 | `Punch Sheet Conversion.md` | How the K15/GI20 punch sheets are translated |
@@ -30,7 +30,7 @@ Related files:
 
 ## 1. The target format (verified)
 
-The reference tune in `DigitalMusicBox.c` was decoded to confirm every detail
+The reference tune in `Reference/DigitalMusicBox.c` was decoded to confirm every detail
 below.
 
 * A tune is a `const uint32_t[]` living in **PROGMEM**.
@@ -136,7 +136,7 @@ The `Tempo` value selects the watchdog prescaler (`WDP`), giving the slot rate:
 > **Snap firmware (Phase 1).** The toy no longer uses the watchdog; it drives the
 > note clock from Timer0 and takes its slot rate from the **per-song
 > `SONG_<NAME>_TEMPO`** macro in `songs.h` (slots/second, `DEFAULT_TEMPO = 8`
-> → 0.125 s per slot). The table above documents the reference `DigitalMusicBox.c`
+> → 0.125 s per slot). The table above documents the reference `Reference/DigitalMusicBox.c`
 > only.
 
 A note that should last longer than one slot is written as **the note bit
@@ -296,7 +296,7 @@ TunePtr = 0;
 ## 7. How the reference tune was decoded (validation)
 
 To be certain of the format, the "Happy Birthday" table from
-`DigitalMusicBox.c` was decoded with the `Scale[]` from §2. The melody came out
+`Reference/DigitalMusicBox.c` was decoded with the `Scale[]` from §2. The melody came out
 as the expected tune in A♭ major:
 
 ```
