@@ -194,7 +194,7 @@ waits out before looping (a song with no tail rest has `gap = 0`). The firmware'
 `advanceNote()` (`playChord()` + RLE walk) decodes this on the fly: one byte
 gap, then a 32-bit chord, holding the pending chord while its rest gap elapses
 and looping at the END record. This shrinks the songs to **3995 bytes** and the
-whole sketch to **6578 bytes (80%)**.
+whole sketch to **6614 bytes (80%)**.
 
 > To add a pause before a song repeats, set an entry in `TAIL_RESTS` in
 > `tools/convert_punchsheet.py` — e.g. `{"Bluey Theme": 1}` appends one extra

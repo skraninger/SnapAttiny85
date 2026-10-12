@@ -1,6 +1,6 @@
 # Phase 1 — Music Box (touch-controlled)
 
-**Status:** implemented · **Build:** `6578 bytes flash (80%)`, `141 bytes RAM (27%)`
+**Status:** implemented · **Build:** `6614 bytes flash (80%)`, `141 bytes RAM (27%)`
 **Sketch:** `Phase1_MusicBox/Phase1_MusicBox.ino` + `Phase1_MusicBox/songs.h`
 
 ---
@@ -13,7 +13,7 @@ own hardware before the next is added.
 | | Phase 1 — Music box | Phase 2 — LED display |
 | --- | --- | --- |
 | **Function** | Play the four songs, controlled by touch | Light the 8-pixel strip; patterns driven by the variable resistor |
-| **New pins** | PB1 (audio), PB2 + PB3 (touch) | PB0 (NeoPixel), PB4 (potentiometer) |
+| **New pins** | PB1 (audio), PB2 + PB3 (touch) | PB4 (NeoPixel strip); pot deferred |
 | **Timers** | Timer0 (20 kHz sample + note clock), Timer1+PLL (PWM carrier) | same, plus bit-banged NeoPixel timing |
 | **Key risk** | none significant (this phase isolates the audio engine) | NeoPixel `show()` disables interrupts and starves the audio ISR |
 
@@ -50,9 +50,9 @@ entirely. It also keeps every resource the LED phase will need free.
 | :----------: | :--: | ---------------- | ----- |
 | 1 | PB5 | RESET (ISP) | reserved |
 | 2 | PB3 | **Touch 2 — PLAY/PAUSE** | ADC3 → `ADCTouch` channel 3 |
-| 3 | PB4 | *free* | reserved for Phase 2 pot (ADC2) |
+| 3 | PB4 | *free* | ADC2; **Phase 2 puts the NeoPixel strip here** (pot deferred) |
 | 4 | GND | Ground | common with audio/supply |
-| 5 | PB0 | **Beat LED** | plain LED + ~330 Ω to GND (active HIGH); Phase 2 reclaims this pin for the NeoPixel data line |
+| 5 | PB0 | **Beat LED** | plain LED + ~330 Ω to GND (active HIGH); Phase 2 keeps it as the beat/touch LED |
 | 6 | PB1 | **Audio PWM (OC1A)** | Timer1 + 64 MHz PLL |
 | 7 | PB2 | **Touch 1 — SONG** | ADC1 → `ADCTouch` channel 1 |
 | 8 | VCC | 5 V | decouple 100 nF + 100 µF |
@@ -61,12 +61,12 @@ entirely. It also keeps every resource the LED phase will need free.
 
 * Only PB5/PB2/PB4/PB3 are ADC-capable, and PB5 is the reset pin, so both touch
   pads must live on **PB2/PB3/PB4**. Using PB2 + PB3 for touch leaves **PB4**
-  for the Phase 2 pot.
+  free (Phase 1 reserved it for the pot; Phase 2 uses it for the NeoPixel strip).
 * The music engine (`DigitalMusicBox.c`) drives its PWM from **Timer1 + the
   64 MHz PLL**. On the ATtiny85 Timer1's channel A is **OC1A = PB1**, so audio
   goes there (channel B would be PB4, which touch/carrier need).
-* That leaves **PB0**: used here for a plain **beat LED**, and reserved for the
-  NeoPixel data line in Phase 2 (the LED is removed once the strip arrives).
+* That leaves **PB0**: used here for a plain **beat LED**. Phase 2 keeps this LED
+  and puts the NeoPixel strip on the unused **PB4** instead (see Phase 2 doc).
 
 ---
 
@@ -238,7 +238,7 @@ copy Phase1_MusicBox\songs.h songs.h
 
 | Step | Check | Expected |
 | :--: | ----- | -------- |
-| 1 | Compile | `6578 bytes (80%) flash`, `141 bytes (27%) RAM` |
+| 1 | Compile | `6614 bytes (80%) flash`, `141 bytes (27%) RAM` |
 | 2 | Power on | remembered song starts playing immediately |
 | 3 | Tap **SONG** | next song starts; order cycles 0→1→2→3→0 |
 | 4 | Tap **PLAY** | music pauses; tap again resumes from the same spot |
@@ -269,31 +269,30 @@ to GND to steady the reading.
   `tools/convert_punchsheet.py`) to retune speed; the beat LED blinks at half
   that tempo.
 * **Chiptune timbre.** Square waves with a ~0.8 s decay — bright, toy-like.
-* **No volume control in Phase 1.** Output level is fixed by the driver; the
-  pot arrives in Phase 2 (unless remapped to volume via `POT_ROLE`).
-* **Beat LED shares PB0.** It is a plain indicator LED, not the NeoPixel strip;
-  Phase 2 reclaims PB0 for the WS2812B data line, so the LED is removed (or its
-  rhythm is folded into the pattern engine).
+* **No volume control in Phase 1.** Output level is fixed by the driver; a volume
+  pot is deferred (its former pin, PB4, is now the Phase 2 strip data line).
+* **Beat LED is PB0.** Phase 2 keeps this LED and drives the NeoPixel strip from
+  the unused **PB4** — see `Phase 2 - LED Music Box.md`.
 * **8 MHz required.** Building at another clock changes the sample rate and
   detunes everything; the `#error` catches this.
 * **No `delay()`/`millis()`.** Timer0 is repurposed; use `snapMillis()`.
 
 ---
 
-## 8. Phase 2 preview (LED display + variable resistor)
+## 8. Phase 2 (implemented) — 8-pixel NeoPixel + patterns
 
-Not implemented yet — recorded here so Phase 1 keeps the right resources free.
+Implemented as a standalone sketch in `Phase2_LedMusicBox/`; see
+`Phase 2 - LED Music Box.md`. Summary:
 
-* **PB0** → WS2812B data (through 470 Ω), 8 pixels (replacing the Phase 1 beat LED).
-* **PB4** → potentiometer wiper (ADC2). Per FSD §7.3 the default role is
-  **brightness**, selectable via `POT_ROLE` (brightness / volume / speed).
-* Pattern engine reused from `LedAttinyTouchx2.ino` (Solid, Breathe, Chaser,
-  Rainbow, Wave, Scanner, Firefly, Color Wipe).
-* **Main risk (FSD §11.1):** `strip.show()` disables interrupts for ~240 µs at
-  8 pixels, which stalls the 20 kHz audio ISR and can click. Mitigations:
-  update the strip only when the frame changes, cap the LED frame rate, and/or
-  accept brief artefacts. This will be documented and measured when the phase
-  is implemented.
+* **Strip on PB4** — the pin Phase 1 had reserved for the pot. Because the pot is
+  deferred, the strip uses this otherwise-unused pin and **PB0 stays the
+  beat/touch LED** (no pin is lost).
+* **One pattern per song** (Breathe, Chaser, Rainbow, Scanner, Solid, Color
+  Wipe), ported integer-only from `LedAttinyTouchx2.ino`; the Adafruit NeoPixel
+  library does not fit in flash.
+* **Refresh tied to the tempo** — the strip updates once per beat, so the
+  interrupts-off WS2812 frame (~275 µs) is rare and masked by note onsets.
+* Build: `7372 bytes (89%) flash`, `175 bytes RAM`.
 
 ---
 

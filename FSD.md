@@ -166,19 +166,19 @@ Logical software layers:
 | :----------: | :--: | ----------------------- | :-------: | --------------------------------------------- |
 | 1            | PB5  | RESET (ISP)             | —         | Left as reset; not repurposed in v1           |
 | 2            | PB3  | Touch pad 2 — **PLAY**  | Input     | ADC3 → `ADCTouch` channel 3                   |
-| 3            | PB4  | Knob wiper (pot)        | Input     | ADC2 → 10 kΩ pot (Phase 2)                    |
+| 3            | PB4  | NeoPixel data out       | Output    | WS2812B DIN via 470 Ω (Phase 2); pot deferred  |
 | 4            | GND  | Ground                  | —         | Must be common with LED/audio supply          |
-| 5            | PB0  | NeoPixel data out       | Output    | Series 470 Ω resistor (Phase 2)               |
+| 5            | PB0  | Beat / touch LED        | Output    | Active HIGH (Phase 1); retained in Phase 2    |
 | 6            | PB1  | Audio PWM out (OC1A)    | Output    | Timer1 + 64 MHz PLL → speaker driver          |
 | 7            | PB2  | Touch pad 1 — **SONG**  | Input     | ADC1 → `ADCTouch` channel 1                   |
 | 8            | VCC  | 5 V (MCU + logic)       | —         | Decoupled with 100 nF + 100 µF                 |
 
 > **Correction on ADC pins:** on the ATtiny85 only **PB5 (ADC0), PB2 (ADC1),
 > PB4 (ADC2)** and **PB3 (ADC3)** are ADC-capable; **PB0 and PB1 are not**.
-> The touch pads therefore sit on PB2/PB3 (leaving PB4 for the Phase 2 pot),
-> the NeoPixel took PB0, and the audio PWM lives on **PB1 (OC1A)** because the
-> music engine needs Timer1's PLL-clocked PWM — the only output pin not needed
-> by touch.
+> The touch pads therefore sit on PB2/PB3; the audio PWM lives on **PB1 (OC1A)**
+> (the music engine needs Timer1's PLL-clocked PWM); and because the pot is
+> deferred, the Phase 2 NeoPixel uses the otherwise-unused **PB4**, leaving
+> **PB0** as the beat/touch LED.
 
 ### 6.2 Bill of materials
 
@@ -447,10 +447,10 @@ simple RC/LC low-pass before the speaker.
 | Constant         | Default | Meaning                                   |
 | ---------------- | :-----: | ----------------------------------------- |
 | `NUM_LEDS`       | 8       | Strip length                              |
-| `LED_PIN`        | 0 (PB0) | NeoPixel data                             |
+| `LED_PIN`        | 4 (PB4) | NeoPixel data (Phase 2); PB0 = beat LED   |
 | `TOUCH_SONG`     | 2 (PB2) | Song pad (`ADCTouch` channel 1)           |
 | `TOUCH_PLAY`     | 3 (PB3) | Play/Pause pad (`ADCTouch` channel 3)     |
-| `POT_PIN`        | 4 (PB4) | Knob ADC input (Phase 2)                  |
+| `POT_PIN`        | — (deferred) | Knob ADC input; PB4 reused by the strip |
 | `AUDIO_PIN`      | 1 (PB1) | PWM audio out (OC1A)                      |
 | `POT_ROLE`       | `BRIGHTNESS` | `BRIGHTNESS` \| `VOLUME` \| `SPEED`  |
 | `TOUCH_THRESH`   | 40      | Touch delta threshold                     |
