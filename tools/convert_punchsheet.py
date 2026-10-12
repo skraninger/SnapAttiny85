@@ -39,7 +39,7 @@ OUTPUT
 
     [gap][chord_lo][chord_mid][chord_hi][chord_MSB]   (gap = rest slots before the chord)
 
-A chord is the same 32-bit word as before (bit 87−MIDI selects a note), rest
+A chord is the same 32-bit word as before (bit 87-MIDI selects a note), rest
 slots are collapsed into the one-byte `gap`, and a final record with chord
 `0x000000FF` ends the song; its `gap` is extra rest slots the firmware waits out
 before looping.  This shrinks the six songs from ~7.5 KB to ~4 KB so they fit

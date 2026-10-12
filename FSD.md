@@ -356,10 +356,10 @@ Writes use `EEPROM.update()` and are performed only after 5 s of inactivity
 | Output   | Ready-to-paste C array per song, plus a byte-size report               |
 | Verify   | Generated array compiles and plays the intended melody (T-17)          |
 
-> **Implemented in this repo:** `tools/convert_song.py` (the converter),
-> `songs/*.song` (the simplified melodies), and `songs.h` (generated PROGMEM
-> arrays for the four v1 songs). The note table, sources, and the full
-> conversion procedure are documented in `Music Conversion.md`.
+> **Implemented in this repo:** `tools/convert_punchsheet.py` (the punch-sheet
+> converter that generates `songs.h`) and `tools/convert_song.py` (an optional
+> `.song` text converter). The slot format, note table, and procedures are in
+> `Music Conversion.md` and `Punch Sheet Conversion.md`.
 
 ---
 

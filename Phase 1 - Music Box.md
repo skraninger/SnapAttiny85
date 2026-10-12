@@ -227,7 +227,7 @@ environment.
 If `songs.h` is regenerated, copy/point it into `Phase1_MusicBox/`:
 
 ```bash
-# from the punch sheets (chords); falls back to the .song for Cant Stop
+# from the punch sheets (chords)
 python tools/convert_punchsheet.py -o Phase1_MusicBox/songs.h
 copy Phase1_MusicBox\songs.h songs.h
 ```
@@ -304,9 +304,8 @@ Implemented as a standalone sketch in `Phase2_LedMusicBox/`; see
 | `Phase1_MusicBox/Phase1_MusicBox.ino` | Phase 1 firmware |
 | `Phase1_MusicBox/songs.h` | generated song data (compiled in) |
 | `tools/convert_punchsheet.py` | punch-sheet PDF converter (main path) |
-| `tools/convert_song.py` | `.song` melody converter (fallback) |
+| `tools/convert_song.py` | optional `.song` melody converter |
 | `MusicBoxPunchSheets/*.pdf` | punch-sheet sources (K15 / GI20) |
-| `songs/*.song` | song source notation |
 | `Punch Sheet Conversion.md` | punch-sheet translation reference |
 | `Music Conversion.md` | slot format & `.song` conversion reference |
 | `FSD.md` | overall functional specification |

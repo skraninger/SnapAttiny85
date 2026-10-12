@@ -1,7 +1,7 @@
-# Snap — ATtiny85 Pinout & Wiring (one-page reference)
+# Snap — ATtiny85 Pinout & Wiring
 
 **MCU:** ATtiny85 (DIP-8) · **Core:** `attiny:avr` (damellis) · **Clock:** 8 MHz internal (`clock=internal8`)
-**Applies to:** Phase 2 — the full build (`Phase2_LedMusicBox`: music + LED strip). Phase-1-only notes at the bottom.
+**Applies to:** Phase 2 — the full build (`Phase2_LedMusicBox`: music + LED strip).
 
 ## Pin table
 
@@ -42,9 +42,3 @@ DIP-8, top view (dot / dimple = pin 1):
   SCK = PB2 (pin 7). PB0/PB1/PB2 are shared with the LED / audio / touch — unplug
   those loads while flashing, or accept the side effects.
 
-## Phase 1 (music only, no strip)
-
-- PB0 = beat LED · PB1 = audio · PB2 = SONG · PB3 = **PLAY/PAUSE** · PB4 = unused
-  (reserved for a pot).
-- In Phase 2, **PB3 became the EFFECT pad** (cycles LED effects) and **PB4 drives
-  the strip**; the pot is deferred.

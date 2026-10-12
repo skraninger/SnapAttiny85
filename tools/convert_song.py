@@ -34,8 +34,8 @@ INPUT NOTATION (.song text file)
 
 USAGE
 -----
-    python tools/convert_song.py songs/*.song -o songs.h
-    python tools/convert_song.py --decode songs/bluey_theme.song   # show slot map
+    python tools/convert_song.py mysong.song othersong.song -o songs.h
+    python tools/convert_song.py --decode mysong.song   # show slot map
 """
 
 from __future__ import annotations

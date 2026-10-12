@@ -2,12 +2,11 @@
 
 **How to turn a song into data the ATtiny85 music player can play.**
 
-This document gathers the information needed to convert simplified melodies
-(the Bluey theme, Baby Shark, *Can't Stop the Feeling*, *Dynamite*) into the
-compact format used by the music engine from `DigitalMusicBox.c`. It records
-the target format (verified by decoding the reference tune), the note table,
-the timing, the source transcriptions used, and the tooling that automates the
-conversion.
+This document describes the compact slot format used by the music engine (from
+`DigitalMusicBox.c`), the note table, the timing, and the **`.song` text
+converter** (`tools/convert_song.py`). The compiled `songs.h` in this project is
+now generated from the punch sheets instead — see `Punch Sheet Conversion.md`;
+the `.song` path below remains available for hand-written melodies.
 
 Related files:
 
@@ -18,15 +17,14 @@ Related files:
 | `tools/convert_punchsheet.py` | Punch-sheet PDF → chord-word converter (this project) |
 | `Punch Sheet Conversion.md` | How the K15/GI20 punch sheets are translated |
 | `MusicBoxPunchSheets/*.pdf` | musicboxmaniacs.com punch sheets (image-only) |
-| `songs/*.song` | Simplified melodies in the converter's text format |
 | `songs.h` | Generated C `PROGMEM` arrays ready to `#include` |
 | `FSD.md` §9 | Where this format fits in the overall design |
 
-> **Two sources.** `songs.h` is now generated from the **punch sheets** (full
-> arrangements, with chords) by `tools/convert_punchsheet.py`; see
-> `Punch Sheet Conversion.md`. The `.song` melody path below is kept for songs
-> without a sheet (currently *Can't Stop the Feeling*) and for hand-written
-> experiments.
+> **Two conversion paths.** `songs.h` is generated from the **punch sheets**
+> (full arrangements, with chords) by `tools/convert_punchsheet.py`; see
+> `Punch Sheet Conversion.md`. The **`.song` melody path** below
+> (`tools/convert_song.py`) is kept for hand-written melodies and experiments —
+> it ships no sample files, so write your own `.song`.
 
 ---
 
@@ -147,11 +145,11 @@ matching how the reference renders its long notes). Rests are zero words.
 
 ---
 
-## 4. Source transcriptions located
+## 4. Original melody sources (background)
 
-Letter-note transcriptions were located online and simplified to a single
-monophonic melody line (the toy's engine is at its best with one tune at a
-time). Every note was then transposed into the G#3…D#6 range.
+These online letter-note transcriptions were the inputs for the retired
+simplified (monophonic) `.song` melodies; the shipping songs now come from the
+punch sheets. Kept here as provenance.
 
 | Song | Excerpt | Source | Notes taken |
 | ---- | ------- | ------ | ----------- |
@@ -173,7 +171,7 @@ time). Every note was then transposed into the G#3…D#6 range.
 `tools/convert_song.py` implements the whole pipeline: text notes →
 `Scale[]` indices → slot words → a C `PROGMEM` array.
 
-### Input format (`songs/*.song`)
+### Input format (a `.song` text file)
 
 ```
 name:          Baby Shark
@@ -193,18 +191,17 @@ melody:
 ### Usage
 
 ```bash
-# generate a combined header (list files explicitly so the song index
-# order is stable and matches the table in section 6)
-python tools/convert_song.py songs/bluey_theme.song songs/baby_shark.song \
-    songs/cant_stop_the_feeling.song songs/dynamite.song -o songs.h
+# generate a combined header from your own .song files (list them explicitly so
+# the song index order is stable)
+python tools/convert_song.py mysong.song othersong.song -o songs.h
 
 # inspect the decoded slot map of one song (great for verification)
-python tools/convert_song.py --decode songs/baby_shark.song
+python tools/convert_song.py --decode mysong.song
 ```
 
-> A shell glob (`songs/*.song`) also works, but file order is then
-> alphabetical, which changes the song indices — fix the order explicitly when
-> the `songIndex` values matter.
+> A shell glob (`*.song`) also works, but file order is then alphabetical, which
+> changes the song indices — fix the order explicitly when the `songIndex`
+> values matter.
 
 Worked example — `D4/0.5` becomes one slot with bit 25 set:
 
@@ -333,13 +330,12 @@ This confirmed the bit order, the rest encoding, the chord behaviour, and the
 
 ## 9. Caveats
 
-* **Copyright.** All four are copyrighted works. Keeping short excerpts for a
+* **Copyright.** The tunes are copyrighted works. Keeping short excerpts for a
   private child's toy is fine; redistributing the compiled firmware publicly
   requires licensing.
-* **Monophonic.** The engine supports 4 voices and the format supports chords,
-  but these songs are transcribed as a single melody line for clarity and to
-  save flash. Add `+` chords for bass if wanted.
+* **Polyphony.** The engine has 4 voices and the punch-sheet songs use chords;
+  the optional `.song` path is monophonic (add `+` for chords).
 * **Timbre.** Voices are square waves with a ~0.8 s decay — bright and
   chiptune-like, which suits a toy but is not hi-fi.
-* **Exactness.** The Bluey and *Can't Stop the Feeling* reductions are
-  approximations (see §4). Treat all four as editable starting points.
+* **Exactness.** The punch sheets are the source of truth; the retired `.song`
+  reductions (§4) were approximations.
