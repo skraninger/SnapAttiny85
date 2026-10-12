@@ -32,12 +32,13 @@
  *   different plan - see "Phase 2 - LED Music Box.md".)
  *
  * LED REFRESH IS TIED TO THE SONG TEMPO
- *   WS2812 bit-banging must disable interrupts for ~240 us per frame.  The audio
+ *   WS2812 bit-banging must disable interrupts for ~275 us per frame.  The audio
  *   sample ISR runs every 50 us, so each frame briefly stalls audio (a small
- *   click).  To keep those stalls rare and masked, the strip is refreshed only
- *   ONCE PER BEAT (every SLOTS_PER_BEAT note slots), so the refresh rate follows
- *   the song tempo (4 fps at the default tempo = 8 slots/s) and each refresh
- *   lands on a note onset.  See renderPattern()/wsShow() in loop().
+ *   click).  To keep those stalls rare and on note boundaries, the strip is
+ *   refreshed on the note clock, once every LED_FRAME_SLOTS slots, so the rate
+ *   follows the song tempo.  LED_FRAME_SLOTS = 1 gives a frame per slot (8 fps at
+ *   the default tempo = 8 slots/s), i.e. the LED effects run 2x faster than a
+ *   once-per-beat refresh.  See loop().
  *
  * BUILD (arduino-cli, damellis "attiny" core)
  *   arduino-cli compile --fqbn attiny:avr:ATtinyX5:cpu=attiny85,clock=internal8 Phase2_LedMusicBox
@@ -70,14 +71,16 @@
 // --- Beat / touch indicator LED (PB0) --------------------------------
 #define LED_PIN         0        // PB0 - plain LED (active HIGH)
 #define SLOTS_PER_BEAT  2        // 1 slot = one eighth note, so a beat = 2 slots
-                                 //   (drives both the PB0 flash and the strip
-                                 //   refresh; refresh rate = tempo / SLOTS_PER_BEAT)
+                                 //   (this is the PB0 flash rate)
 
 // --- NeoPixel strip (PB4) --------------------------------------------
 #define NP_PIN          4        // PB4 - WS2812B data line (through ~470R)
 #define NUM_LEDS        8        // strip length
 #define NP_BRIGHTNESS   48       // 0..255 master scale applied to every pixel
                                  //   (keeps 8 px within a small supply's budget)
+#define LED_FRAME_SLOTS 1        // note slots per strip refresh.  2 = once per
+                                 //   beat (4 fps at tempo 8); 1 = a frame every
+                                 //   slot, i.e. LED effects run 2x faster (8 fps)
 
 // --- Tempo -----------------------------------------------------------
 // Per-song speed lives in songs.h (SONG_<NAME>_TEMPO, SLOTS PER SECOND; 1 slot
@@ -131,10 +134,16 @@ static volatile uint16_t noteDiv = 0;   // counts ms toward the next note slot
 // Playback tempo (slots per second) for the current song.
 volatile uint8_t tempo = DEFAULT_TEMPO;
 
-// Beat counter: one beat every SLOTS_PER_BEAT slots; polled by loop() for the
-// PB0 flash and the strip refresh.  8-bit so the read in loop() is atomic.
+// Beat counter: one beat every SLOTS_PER_BEAT slots; drives the PB0 flash.
+// 8-bit so the read in loop() is atomic.
 volatile uint8_t g_beats = 0;
 static volatile uint8_t beatDiv = 0;
+
+// Strip frame counter: one frame every LED_FRAME_SLOTS slots.  loop() renders
+// the LED pattern when this changes; it is independent of the beat so the LED
+// effects can run at their own (2x) rate.
+volatile uint8_t g_frames = 0;
+static volatile uint8_t ledDiv = 0;
 
 // Trigger every note set in a chord word (bit 31 = Scale[0] = G#3).
 static void playChord(unsigned long chord) {
@@ -191,7 +200,11 @@ ISR(TIMER0_COMPA_vect) {
             noteDiv = 0;
             if (playing) {
                 advanceNote();
-                if (++beatDiv >= SLOTS_PER_BEAT) {   // one beat = SLOTS_PER_BEAT slots
+                if (++ledDiv >= LED_FRAME_SLOTS) {     // strip frame clock (2x)
+                    ledDiv = 0;
+                    g_frames++;
+                }
+                if (++beatDiv >= SLOTS_PER_BEAT) {     // PB0 beat clock
                     beatDiv = 0;
                     g_beats++;
                 }
@@ -272,19 +285,26 @@ static void wheel(uint8_t pos, uint8_t *r, uint8_t *g, uint8_t *b) {
     }
 }
 
-// 0) Bluey Theme - Breathe: smooth triangle fade on a cool colour.
-static void patBreathe() {
-    static uint8_t lvl = 0;
-    static int8_t  dir = 2;
-    uint8_t r, g, b;
-    wheel(140, &r, &g, &b);
-    lvl = (uint8_t)(lvl + dir);
-    if (lvl == 0 || lvl >= 150) dir = -dir;
-    uint8_t s = lvl > 255 ? 255 : lvl;
-    for (uint8_t i = 0; i < NUM_LEDS; i++)
-        setPx(i, (uint8_t)(((uint16_t)r * s) >> 8),
-                 (uint8_t)(((uint16_t)g * s) >> 8),
-                 (uint8_t)(((uint16_t)b * s) >> 8));
+// Integer sine table: sin(2*pi*k/32) scaled to +-127 (no float/sin() needed).
+// Stored in flash (PROGMEM) so it costs no SRAM.
+static const int8_t sineTab[32] PROGMEM = {
+      0,  25,  49,  71,  90, 106, 117, 125,
+    127, 125, 117, 106,  90,  71,  49,  25,
+      0, -25, -49, -71, -90,-106,-117,-125,
+   -127,-125,-117,-106, -90, -71, -49, -25 };
+
+// 0) Bluey Theme - Wave: a sinusoidal hue wave travels across the strip.  Hue
+//    oscillates 160..240 (blue -> purple -> red), matching LedAttinyTouchx2's
+//    waveyFrame(), but computed with the integer sine table (no float).
+static void patWave() {
+    static uint8_t phase = 0;
+    for (uint8_t i = 0; i < NUM_LEDS; i++) {
+        int8_t s = (int8_t)pgm_read_byte(&sineTab[(i * 4 + phase) & 31]);  // 45 deg/px
+        uint8_t r, g, b;
+        wheel((uint8_t)(200 + (s * 40) / 127), &r, &g, &b);
+        setPx(i, r, g, b);
+    }
+    phase = (phase + 2) & 31;                          // wave travels (per frame)
 }
 
 // 1) Baby Shark - Chaser: one bright green pixel runs around the strip.
@@ -347,7 +367,7 @@ static void patWipe() {
 // One pattern per song (index == songIndex).
 static void renderPattern() {
     switch (songIndex) {
-        case 0: patBreathe(); break;   // Bluey Theme
+        case 0: patWave();    break;   // Bluey Theme
         case 1: patChaser();  break;   // Baby Shark
         case 2: patRainbow(); break;   // Dynamite
         case 3: patScanner(); break;   // Dance of the Sugar Plum Fairy
@@ -498,7 +518,7 @@ void loop() {
         }
     }
 
-    // Beat clock drives BOTH the PB0 flash and the (tempo-locked) strip refresh.
+    // PB0 (beat/touch LED): flash once per beat; lit while a pad is held.
     // g_beats is 8-bit so the read here is atomic on AVR.
     static uint8_t  lastBeat = 0;
     static uint32_t ledOffAt = 0;
@@ -507,11 +527,18 @@ void loop() {
         lastBeat = g_beats;
         ledOffAt = snapMillis() + (1000 / tempo);   // LED lit for one slot
         ledOn    = true;
-        renderPattern();                            // advance pattern once per beat
-        wsShow();                                   // ~240 us with IRQs off
     }
     if (ledOn && (int32_t)(snapMillis() - ledOffAt) >= 0) {
         ledOn = false;
+    }
+
+    // Strip: render one frame every LED_FRAME_SLOTS slots (still tied to the
+    // tempo).  g_frames is 8-bit so the read here is atomic on AVR.
+    static uint8_t lastFrame = 0;
+    if (g_frames != lastFrame) {
+        lastFrame = g_frames;
+        renderPattern();
+        wsShow();                                   // ~275 us with IRQs off
     }
 
     bool touchHeld = lastTouch[0] || lastTouch[1];

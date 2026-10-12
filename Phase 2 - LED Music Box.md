@@ -1,6 +1,6 @@
 # Phase 2 — LED Music Box (8-pixel NeoPixel + patterns)
 
-**Status:** implemented · **Build:** `7372 bytes flash (89%)`, `175 bytes RAM (34%)`
+**Status:** implemented · **Build:** `7498 bytes flash (91%)`, `176 bytes RAM (34%)`
 **Sketch:** `Phase2_LedMusicBox/Phase2_LedMusicBox.ino` + `Phase2_LedMusicBox/songs.h`
 
 Phase 2 = **Phase 1 plus an 8-pixel WS2812B ("NeoPixel") strip**, with **one LED
@@ -70,15 +70,15 @@ used (it would not fit — see §6). `renderPattern()` selects by `songIndex`.
 
 | # | Song | Pattern | Behaviour |
 |:-:|------|---------|-----------|
-| 0 | Bluey Theme | **Breathe** | triangle fade on a cool colour |
+| 0 | Bluey Theme | **Wave** | sinusoidal hue wave travels across the strip |
 | 1 | Baby Shark | **Chaser** | one green pixel runs around the strip |
 | 2 | Dynamite | **Rainbow** | full-spectrum gradient scrolling |
 | 3 | Dance of the Sugar Plum Fairy | **Scanner** | one pixel bounces end to end, colour changes per sweep |
 | 4 | Pachelbel's Canon | **Solid** | all pixels one colour, hue drifting slowly |
 | 5 | Super Mario Brothers | **Color Wipe** | strip fills one pixel at a time, new colour per pass |
 
-`Wave` and `Firefly` were intentionally left out: `Wave` uses `float`/`sin()`
-(pulls in ~1 KB of float code) and both are the heaviest patterns.
+`Firefly` was intentionally left out (heaviest). `Wave` is implemented with a
+small **integer sine table in PROGMEM** (no `float`/`sin()`), so it stays cheap.
 
 ---
 
@@ -88,20 +88,23 @@ WS2812 bit-banging must hold the CPU (interrupts off) for the whole frame. At
 8 pixels that is **~275 µs**; the audio sample ISR runs every 50 µs, so a naive
 frame steals ~5 audio samples (a short click).
 
-To keep those stalls **rare and masked**, the strip is refreshed **once per
-beat** — the same `g_beats` tick that flashes PB0:
+To keep those stalls on note boundaries, the strip is refreshed from the note
+clock, once every `LED_FRAME_SLOTS` slots:
 
 ```cpp
-if (g_beats != lastBeat) {                 // one beat (SLOTS_PER_BEAT slots)
-    lastBeat = g_beats;
+if (g_frames != lastFrame) {               // one frame per LED_FRAME_SLOTS slots
+    lastFrame = g_frames;
     renderPattern();                       // advance the pattern one frame
     wsShow();                              // ~275 us with interrupts off
 }
 ```
 
-- Refresh rate = `tempo / SLOTS_PER_BEAT` = **4 fps** at the default tempo 8.
-- Stalls land on **note onsets**, where the note attack masks the artifact.
-- The strip holds its last frame while paused (no beats ⇒ no refresh).
+- Refresh rate = `tempo / LED_FRAME_SLOTS`. With `LED_FRAME_SLOTS = 1` (set so
+  the effects run **2x** faster than the original once-per-beat rate) that is
+  **8 fps** at the default tempo 8.
+- The **PB0 beat flash is unchanged** (still once per `SLOTS_PER_BEAT` slots).
+- Stalls land on note boundaries, where the note attack masks the artifact.
+- The strip holds its last frame while paused (no note clock ⇒ no refresh).
 
 If a click is ever objectionable, the next step is to interleave a few WS2812
 bits inside the audio ISR (zero-stall), but that adds code and complexity.
@@ -128,11 +131,11 @@ stay within a small supply's budget.
 
 | | Phase 1 | **Phase 2** |
 |---|---:|---:|
-| Flash | 6614 B (80%) | **7372 B (89%)** |
-| RAM | 141 B (27%) | **175 B (34%)** |
+| Flash | 6614 B (80%) | **7498 B (91%)** |
+| RAM | 141 B (27%) | **176 B (34%)** |
 | — of which strip pixel buffer | 0 | 24 B (`8 × 3`) |
 
-Fits with **~820 B of flash headroom** and ~337 B of RAM. Phase 2 did **not**
+Fits with **~690 B of flash headroom** and ~336 B of RAM. Phase 2 did **not**
 use `Adafruit_NeoPixel` (~1.5 KB) — with it, driver + patterns would have
 overflowed. A 7th/8th pattern with a separate selector is possible only if the
 heavy patterns stay out or a song is shortened.
@@ -150,12 +153,12 @@ Verification:
 
 | Step | Check | Expected |
 | :--: | ----- | -------- |
-| 1 | Compile | `7372 bytes (89%) flash`, `175 bytes (34%) RAM` |
+| 1 | Compile | `7498 bytes (91%) flash`, `176 bytes (34%) RAM` |
 | 2 | Power on | remembered song plays; its pattern shows immediately |
 | 3 | Tap **SONG** | song and pattern advance together (0…5→0) |
 | 4 | Tap **PLAY** | music pauses; strip holds its frame; PB0 stops flashing |
 | 5 | Watch PB0 | one flash per beat; lit while a pad is held |
-| 6 | Watch the strip | pattern animates at ~4 fps (one step per beat) |
+| 6 | Watch the strip | pattern animates at ~8 fps (one step per note slot) |
 | 7 | Listen | music intelligible; at most a faint tick per beat-led refresh |
 
 ---
