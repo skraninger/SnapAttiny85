@@ -8,14 +8,14 @@
  * NeoPixel library is NOT used because it would not fit in the ATtiny85's 8 KB.
  *
  * CONTROLS
- *   Touch 1 (SONG)  - advance to the next song AND switch to that song's pattern
- *   Touch 2 (PLAY)  - play / pause the current song
+ *   Touch 1 (SONG)  - advance to the next song AND cycle the LED effect
+ *   Touch 2 (EFFECT)- cycle to the next LED effect
  *   LED     (PB0)   - plain LED: touch indicator + one flash per beat (Phase 1)
  *   Strip   (PB4)   - WS2812B data for the 8-pixel strip
  *
  * PIN MAP (Phase 2)
  *   1  PB5  RESET (ISP)                     reserved
- *   2  PB3  Touch 2 - PLAY/PAUSE            ADC3 -> ADCTouch channel 3
+ *   2  PB3  Touch 2 - EFFECT               ADC3 -> ADCTouch channel 3
  *   3  PB4  NeoPixel data out (WS2812B)     was "Phase 2 pot"; pot deferred
  *   4  GND                                  common with strip/audio supply
  *   5  PB0  Beat / touch LED (active HIGH)  Phase 1's LED kept here
@@ -62,8 +62,8 @@
 #endif
 
 // --- Touch pads (PB2 / PB3) -----------------------------------------
-#define TOUCH_SONG_CH   1        // ADC1 = PB2  (Song pad)
-#define TOUCH_PLAY_CH   3        // ADC3 = PB3  (Play/Pause pad)
+#define TOUCH_SONG_CH   1        // ADC1 = PB2  (Song pad: next song + next effect)
+#define TOUCH_EFFECT_CH 3        // ADC3 = PB3  (Effect pad: next LED effect)
 #define TOUCH_THRESHOLD 40       // counts above the calibrated baseline
 #define TOUCH_GAP_MS    250      // minimum gap between two accepted touches
 #define TOUCH_CAL_N     100      // startup baseline samples per pad (FR-07)
@@ -81,6 +81,7 @@
 #define LED_FRAME_SLOTS 1        // note slots per strip refresh.  2 = once per
                                  //   beat (4 fps at tempo 8); 1 = a frame every
                                  //   slot, i.e. LED effects run 2x faster (8 fps)
+#define NUM_PATTERNS    6        // LED effects in the cycle (see renderPattern)
 
 // --- Tempo -----------------------------------------------------------
 // Per-song speed lives in songs.h (SONG_<NAME>_TEMPO, SLOTS PER SECOND; 1 slot
@@ -100,6 +101,7 @@
 #define EEPROM_MAGIC    0x53     // 'S'
 #define ADDR_MAGIC      0
 #define ADDR_SONG       1
+#define ADDR_PATTERN    2
 
 /* ------------------------------------------------------------------ */
 /*  Music engine (David Johnson-Davies, CC BY 4.0)                     */
@@ -120,6 +122,7 @@ volatile uint16_t TunePtr = 0;       // byte cursor into Tune
 volatile uint8_t  Chan    = 0;
 volatile bool     playing = false;
 uint8_t           songIndex = 0;     // current song (also mirrored to EEPROM)
+uint8_t           patternIndex = 0;  // current LED effect (also mirrored to EEPROM)
 
 // RLE decode state: after a record's `gap` rest slots the chord is played.
 volatile uint8_t      restSlots = 0;
@@ -364,15 +367,17 @@ static void patWipe() {
     if (++pos >= NUM_LEDS) { pos = 0; hue += 64; }
 }
 
-// One pattern per song (index == songIndex).
+// LED effects, cycled by the EFFECT pad (index 0..NUM_PATTERNS-1).  The same
+// cycle also advances when the song changes, so a new song always brings a new
+// effect.  (A subset of LedAttinyTouchx2.ino's patterns, integer-only.)
 static void renderPattern() {
-    switch (songIndex) {
-        case 0: patWave();    break;   // Bluey Theme
-        case 1: patChaser();  break;   // Baby Shark
-        case 2: patRainbow(); break;   // Dynamite
-        case 3: patScanner(); break;   // Dance of the Sugar Plum Fairy
-        case 4: patSolid();   break;   // Pachelbel's Canon
-        default: patWipe();   break;   // Super Mario Brothers
+    switch (patternIndex) {
+        case 0: patWave();    break;   // blue/purple/red hue wave
+        case 1: patChaser();  break;   // one pixel runs around
+        case 2: patRainbow(); break;   // scrolling rainbow
+        case 3: patScanner(); break;   // bouncing pixel, colour per sweep
+        case 4: patSolid();   break;   // solid colour, hue drifts
+        default: patWipe();   break;   // fill one pixel at a time
     }
 }
 
@@ -473,22 +478,25 @@ void setup() {
 
     for (uint8_t c = 0; c < VOICES; c++) { Acc[c] = 0; Freq[c] = 0; Amp[c] = 0; }
 
-    // --- EEPROM: restore the last song
+    // --- EEPROM: restore the last song and LED effect
     if (EEPROM.read(ADDR_MAGIC) != EEPROM_MAGIC) {
         EEPROM.write(ADDR_MAGIC, EEPROM_MAGIC);
         EEPROM.write(ADDR_SONG, 0);
+        EEPROM.write(ADDR_PATTERN, 0);
     }
     uint8_t song = EEPROM.read(ADDR_SONG);
     if (song >= NUM_SONGS) song = 0;
+    patternIndex = EEPROM.read(ADDR_PATTERN);
+    if (patternIndex >= NUM_PATTERNS) patternIndex = 0;
 
     // --- Touch calibration (average resting reads to set the baseline)
-    long sumSong = 0, sumPlay = 0;
+    long sumSong = 0, sumEffect = 0;
     for (uint8_t i = 0; i < TOUCH_CAL_N; i++) {
-        sumSong += ADCTouch.read(TOUCH_SONG_CH, 10);
-        sumPlay += ADCTouch.read(TOUCH_PLAY_CH, 10);
+        sumSong   += ADCTouch.read(TOUCH_SONG_CH, 10);
+        sumEffect += ADCTouch.read(TOUCH_EFFECT_CH, 10);
     }
-    baseline[0] = sumSong / TOUCH_CAL_N;
-    baseline[1] = sumPlay / TOUCH_CAL_N;
+    baseline[0] = sumSong   / TOUCH_CAL_N;
+    baseline[1] = sumEffect / TOUCH_CAL_N;
 
     // --- 20 kHz sample clock: Timer0 fast PWM, TOP=OCR0A=49, prescaler 8
     TCCR0A = 3 << WGM00;
@@ -501,21 +509,21 @@ void setup() {
 }
 
 void loop() {
-    // SONG pad: next song + its pattern, restart, remember it
+    // SONG pad: next song, and cycle the LED effect as well; restart; remember
     if (touchFired(0, TOUCH_SONG_CH)) {
         uint8_t next = (songIndex + 1) % NUM_SONGS;
-        selectSong(next);
+        patternIndex = (patternIndex + 1) % NUM_PATTERNS;
+        selectSong(next);                       // renders the new effect at once
         EEPROM.update(ADDR_SONG, next);
+        EEPROM.update(ADDR_PATTERN, patternIndex);
     }
 
-    // PLAY pad: toggle play / pause
-    if (touchFired(1, TOUCH_PLAY_CH)) {
-        if (playing) {
-            playing = false;
-            silenceVoices();
-        } else {
-            playing = true;
-        }
+    // EFFECT pad: cycle to the next LED effect and show it immediately
+    if (touchFired(1, TOUCH_EFFECT_CH)) {
+        patternIndex = (patternIndex + 1) % NUM_PATTERNS;
+        EEPROM.update(ADDR_PATTERN, patternIndex);
+        renderPattern();
+        wsShow();
     }
 
     // PB0 (beat/touch LED): flash once per beat; lit while a pad is held.

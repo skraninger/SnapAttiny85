@@ -287,12 +287,13 @@ Implemented as a standalone sketch in `Phase2_LedMusicBox/`; see
 * **Strip on PB4** — the pin Phase 1 had reserved for the pot. Because the pot is
   deferred, the strip uses this otherwise-unused pin and **PB0 stays the
   beat/touch LED** (no pin is lost).
-* **One pattern per song** (Wave, Chaser, Rainbow, Scanner, Solid, Color
-  Wipe), ported integer-only from `LedAttinyTouchx2.ino`; the Adafruit NeoPixel
-  library does not fit in flash.
-* **Refresh tied to the tempo** — the strip updates once per beat, so the
-  interrupts-off WS2812 frame (~275 µs) is rare and masked by note onsets.
-* Build: `7498 bytes (91%) flash`, `176 bytes RAM`.
+* **LED effects are cycled** by the second touch pad (Wave, Chaser, Rainbow,
+  Scanner, Solid, Color Wipe) and also advance on a song change; ported
+  integer-only from `LedAttinyTouchx2.ino`. The Adafruit NeoPixel library does
+  not fit in flash. (Phase 1's PLAY/pause is gone — that pad now cycles effects.)
+* **Refresh tied to the tempo** — the strip updates from the note clock (once
+  per note slot), so the interrupts-off WS2812 frame (~275 µs) stays bounded.
+* Build: `7554 bytes (92%) flash`, `177 bytes RAM`.
 
 ---
 

@@ -449,7 +449,7 @@ simple RC/LC low-pass before the speaker.
 | `NUM_LEDS`       | 8       | Strip length                              |
 | `LED_PIN`        | 4 (PB4) | NeoPixel data (Phase 2); PB0 = beat LED   |
 | `TOUCH_SONG`     | 2 (PB2) | Song pad (`ADCTouch` channel 1)           |
-| `TOUCH_PLAY`     | 3 (PB3) | Play/Pause pad (`ADCTouch` channel 3)     |
+| `TOUCH_EFFECT`   | 3 (PB3) | Effect pad — next LED effect (`ADCTouch` ch 3) |
 | `POT_PIN`        | — (deferred) | Knob ADC input; PB4 reused by the strip |
 | `AUDIO_PIN`      | 1 (PB1) | PWM audio out (OC1A)                      |
 | `POT_ROLE`       | `BRIGHTNESS` | `BRIGHTNESS` \| `VOLUME` \| `SPEED`  |

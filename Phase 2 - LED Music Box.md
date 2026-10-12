@@ -1,12 +1,13 @@
 # Phase 2 — LED Music Box (8-pixel NeoPixel + patterns)
 
-**Status:** implemented · **Build:** `7498 bytes flash (91%)`, `176 bytes RAM (34%)`
+**Status:** implemented · **Build:** `7554 bytes flash (92%)`, `177 bytes RAM (34%)`
 **Sketch:** `Phase2_LedMusicBox/Phase2_LedMusicBox.ino` + `Phase2_LedMusicBox/songs.h`
 
-Phase 2 = **Phase 1 plus an 8-pixel WS2812B ("NeoPixel") strip**, with **one LED
-pattern per song**. It is a standalone sketch so Phase 1 stays untouched; the
-music engine, touch stack, per-song tempo and RLE song format are copied
-verbatim from Phase 1.
+Phase 2 = **Phase 1 plus an 8-pixel WS2812B ("NeoPixel") strip** with a set of
+**LED effects that are cycled by the second touch pad** (and also advance on a
+song change). It is a standalone sketch so Phase 1 stays untouched; the music
+engine, touch stack, per-song tempo and RLE song format are copied verbatim from
+Phase 1.
 
 ---
 
@@ -15,7 +16,7 @@ verbatim from Phase 1.
 | ATtiny85 pin | Port | Phase 2 function | Notes |
 | :----------: | :--: | ---------------- | ----- |
 | 1 | PB5 | RESET (ISP) | reserved — cannot be repurposed without HV programming |
-| 2 | PB3 | Touch 2 — PLAY/PAUSE | ADC3 → `ADCTouch` channel 3 |
+| 2 | PB3 | Touch 2 — EFFECT | ADC3 → `ADCTouch` channel 3 |
 | 3 | **PB4** | **NeoPixel data out** | WS2812B DIN through ~470 Ω; **was the reserved pot pin** |
 | 4 | GND | Ground | common with LED/audio supply |
 | 5 | PB0 | Beat / touch LED | plain LED (active HIGH) — kept from Phase 1 |
@@ -48,7 +49,7 @@ rather than repurposing the flashing-LED pin.
 - **Songs** — `songs.h` (RLE, one record per chord), `NUM_SONGS = 6`.
 - **Per-song tempo** — `SONG_<NAME>_TEMPO` applied by `selectSong()`.
 - **Touch** — `ADCTouch` + baseline calibration + edge/`TOUCH_GAP_MS` debounce.
-- **EEPROM** — remembers the song, auto-plays at reset.
+- **EEPROM** — remembers the song and LED effect; auto-plays at reset.
 
 ---
 
@@ -56,29 +57,35 @@ rather than repurposing the flashing-LED pin.
 
 | Event | Action |
 | ----- | ------ |
-| **SONG** touched | next song **and** its pattern; restart; remember in EEPROM |
-| **PLAY** touched | toggle play / pause |
-| **LED (PB0)** | lit while a pad is held; flashes once per beat while playing |
-| **Strip (PB4)** | renders the current song's pattern |
+| **SONG** touched | next song **and** next LED effect; restart; remember in EEPROM |
+| **EFFECT** touched | next LED effect (shown immediately); remember in EEPROM |
+| **LED (PB0)** | lit while a pad is held; flashes once per beat |
+| **Strip (PB4)** | renders the current LED effect |
+
+> There is **no pause control**: the PLAY pad was repurposed to cycle the LED
+> effects, and a song always plays (looping). The song and the effect advance
+> independently — **either pad steps the effect on by one**.
 
 ---
 
-## 4. Patterns — one per song
+## 4. LED effects (cycled by the EFFECT pad)
 
 Ported (integer-only) from `LedAttinyTouchx2.ino`; the Adafruit library is **not**
-used (it would not fit — see §6). `renderPattern()` selects by `songIndex`.
+used (it would not fit — see §6). `renderPattern()` selects by the global
+`patternIndex`, which **both the EFFECT pad and a song change advance**.
 
-| # | Song | Pattern | Behaviour |
-|:-:|------|---------|-----------|
-| 0 | Bluey Theme | **Wave** | sinusoidal hue wave travels across the strip |
-| 1 | Baby Shark | **Chaser** | one green pixel runs around the strip |
-| 2 | Dynamite | **Rainbow** | full-spectrum gradient scrolling |
-| 3 | Dance of the Sugar Plum Fairy | **Scanner** | one pixel bounces end to end, colour changes per sweep |
-| 4 | Pachelbel's Canon | **Solid** | all pixels one colour, hue drifting slowly |
-| 5 | Super Mario Brothers | **Color Wipe** | strip fills one pixel at a time, new colour per pass |
+| # | Effect | Behaviour |
+|:-:|--------|-----------|
+| 0 | **Wave** | sinusoidal hue wave travels across the strip |
+| 1 | **Chaser** | one green pixel runs around the strip |
+| 2 | **Rainbow** | full-spectrum gradient scrolling |
+| 3 | **Scanner** | one pixel bounces end to end, colour changes per sweep |
+| 4 | **Solid** | all pixels one colour, hue drifting slowly |
+| 5 | **Color Wipe** | strip fills one pixel at a time, new colour per pass |
 
 `Firefly` was intentionally left out (heaviest). `Wave` is implemented with a
 small **integer sine table in PROGMEM** (no `float`/`sin()`), so it stays cheap.
+The last-used effect is stored in EEPROM (`ADDR_PATTERN = 0x02`).
 
 ---
 
@@ -131,14 +138,14 @@ stay within a small supply's budget.
 
 | | Phase 1 | **Phase 2** |
 |---|---:|---:|
-| Flash | 6614 B (80%) | **7498 B (91%)** |
-| RAM | 141 B (27%) | **176 B (34%)** |
+| Flash | 6614 B (80%) | **7554 B (92%)** |
+| RAM | 141 B (27%) | **177 B (34%)** |
 | — of which strip pixel buffer | 0 | 24 B (`8 × 3`) |
 
-Fits with **~690 B of flash headroom** and ~336 B of RAM. Phase 2 did **not**
+Fits with **~640 B of flash headroom** and ~335 B of RAM. Phase 2 did **not**
 use `Adafruit_NeoPixel` (~1.5 KB) — with it, driver + patterns would have
-overflowed. A 7th/8th pattern with a separate selector is possible only if the
-heavy patterns stay out or a song is shortened.
+overflowed. More effects (or a separate pattern selector) are possible only if
+the heavy patterns stay out or a song is shortened.
 
 ---
 
@@ -153,13 +160,13 @@ Verification:
 
 | Step | Check | Expected |
 | :--: | ----- | -------- |
-| 1 | Compile | `7498 bytes (91%) flash`, `176 bytes (34%) RAM` |
-| 2 | Power on | remembered song plays; its pattern shows immediately |
-| 3 | Tap **SONG** | song and pattern advance together (0…5→0) |
-| 4 | Tap **PLAY** | music pauses; strip holds its frame; PB0 stops flashing |
+| 1 | Compile | `7554 bytes (92%) flash`, `177 bytes (34%) RAM` |
+| 2 | Power on | remembered song plays; remembered effect shows immediately |
+| 3 | Tap **SONG** | next song starts **and** the effect advances one step |
+| 4 | Tap **EFFECT** | the LED effect changes immediately (cycles 0…5→0) |
 | 5 | Watch PB0 | one flash per beat; lit while a pad is held |
-| 6 | Watch the strip | pattern animates at ~8 fps (one step per note slot) |
-| 7 | Listen | music intelligible; at most a faint tick per beat-led refresh |
+| 6 | Watch the strip | effect animates at ~8 fps (one step per note slot) |
+| 7 | Listen | music intelligible; at most a faint tick per strip refresh |
 
 ---
 
