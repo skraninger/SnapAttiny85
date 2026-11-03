@@ -129,8 +129,8 @@ disassembly (8 MHz → 1 cycle = 125 ns):
 | `1` | 6 cyc = 0.75 µs  | 12 cyc = 1.5 µs   | 0.8 ± 0.15 / 1.25 ± 0.6 µs |
 
 Both are inside the part's tolerances. The frame sends `NUM_LEDS × 24` bits,
-MSB-first, GRB order; `setPx()` applies `NP_BRIGHTNESS` (default 48) so 8 pixels
-stay within a small supply's budget.
+MSB-first, GRB order; `setPx()` applies `NP_BRIGHTNESS` (default 32, ≈ 1/8) so
+12 pixels draw roughly the same current the original 8-pixel strip did at 48.
 
 ---
 

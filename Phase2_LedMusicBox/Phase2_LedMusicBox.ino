@@ -1,8 +1,8 @@
 /*
- * Snap - Phase 2: Music box + 8-pixel WS2812B ("NeoPixel") strip
+ * Snap - Phase 2: Music box + 12-pixel WS2812B ("NeoPixel") strip
  * ---------------------------------------------------------------------------
  * Phase 2 is Phase 1 (touch music box: RLE songs + per-song tempo, ADCTouch,
- * PWM audio) plus an 8-pixel LED strip that shows ONE animated pattern per
+ * PWM audio) plus a 12-pixel LED strip that shows ONE animated pattern per
  * song.  It is a standalone sketch so Phase 1 stays untouched.  The patterns
  * are hand-ported (integer-only) from LedAttinyTouchx2.ino; the Adafruit
  * NeoPixel library is NOT used because it would not fit in the ATtiny85's 8 KB.
@@ -76,8 +76,10 @@
 // --- NeoPixel strip (PB4) --------------------------------------------
 #define NP_PIN          4        // PB4 - WS2812B data line (through ~470R)
 #define NUM_LEDS        12        // strip length
-#define NP_BRIGHTNESS   48       // 0..255 master scale applied to every pixel
-                                 //   (keeps 8 px within a small supply's budget)
+#define NP_BRIGHTNESS   32       // 0..255 master scale applied to every pixel.
+                                 //   32/255 ~= 1/8, so 12 px draw the same total
+                                 //   as 8 px did at 48: ~30 mA mixed,
+                                 //   ~90 mA full white (well under 1 A)
 #define LED_FRAME_SLOTS 1        // note slots per strip refresh.  2 = once per
                                  //   beat (4 fps at tempo 8); 1 = a frame every
                                  //   slot, i.e. LED effects run 2x faster (8 fps)
@@ -251,7 +253,7 @@ static void wsSendByte(uint8_t b) {
     );
 }
 
-// Push the whole buffer out.  Interrupts are masked for ~240 us (8 px x 24 bit
+// Push the whole buffer out.  Interrupts are masked for ~360 us (12 px x 24 bit
 // x ~1.4 us).  The line is left LOW, which the strip latches after >50 us.
 static void wsShow() {
     uint8_t sreg = SREG;
